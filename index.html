@@ -218,124 +218,151 @@
 <textarea id="copyArea" style="position:fixed; top:-9999px; left:-9999px;"></textarea>
 
 <script>
-const STORAGE_KEY = 'infurnia-partner-dashboard-v2';
+const STORAGE_KEY = 'infurnia-partner-dashboard-v3';
 
 const seedData = [
   {id:'c1', sno:1, firm:'JET — A unit of ARJN Woodmart',
     products:['Kitchen','Wardrobe','Office Furniture','Doors','Interior Works','Bathroom Vanities','TV Console'],
     contactName:'Mr. Himalaya', contactNumber:'63964 83627', location:'Khekra, Baghpat – U.P.',
-    referredBy:'Mr. Prateek Jain', status:'About to Onboard', userIds:1, costPerUserId:0, sharedWithCount:1,
+    referredBy:'Mr. Prateek Jain', status:'Onboard', userIds:1, costPerUserId:0, sharedWithCount:0,
     designs:43, quotationValue:2847000, proposalsFinalized:1971000, hardwareValue:79649, converted:'Yes',
     experience:'Since May- designer is not there, rest feedback is good.\nAlso, payment received for onboarding process.'},
   {id:'c2', sno:2, firm:'AAKAR Interior Hingewadi',
     products:['Kitchen','Wardrobe','Office Furniture','Beds','Interior Works','Bathroom Vanities','TV Console'],
     contactName:'Mr. Abhishek Tiwari', contactNumber:'8007123466', location:'Pune',
-    referredBy:'Mr. Kunal Rajput', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    referredBy:'Mr. Kunal Rajput', status:'Demo Trial', userIds:1, costPerUserId:6000, sharedWithCount:4,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'used only 2-3 designs. experience is good but  '},
   {id:'c3', sno:3, firm:'Bright World Infrastructure and Interiors Pvt. Ltd.',
     products:['Kitchen','Wardrobe','Interior Solution','Civil & Construction'],
     contactName:'Faraz Badar', contactNumber:'7827748078', location:'Gurugram',
-    referredBy:'Mr. Shishir Swain', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    referredBy:'Mr. Shishir Swain', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:1,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using.'},
   {id:'c4', sno:4, firm:'Novitat Furniture Private Limited (Existing User of Infurnia)',
     products:['Kitchen','Wardrobe','Interior Works','Bathroom Vanities','TV Console'],
     contactName:'Mr. Harpal Singh', contactNumber:'7300039863', location:'Jaipur',
     referredBy:'Ajay Kumar Jangid', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using software.'},
   {id:'c5', sno:5, firm:'Mark Geoworks Pvt Ltd, Erode',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mr. Anish', contactNumber:'9597100959', location:'Coimbatore',
     referredBy:'Mr. Pavithran M', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using software.'},
   {id:'c6', sno:6, firm:'Lords Interior',
     products:[],
     contactName:'Mr. Pankaj Sachdev', contactNumber:'90222 73795', location:'Pune',
     referredBy:'Kunal Rajput', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using software.'},
   {id:'c7', sno:7, firm:'Ganesh Hardware Sanitary',
     products:['Dealer','Interior Works','Kitchen','Wardrobe'],
     contactName:'Mr. Piyush Gupta', contactNumber:'9717700759', location:'Meerut',
     referredBy:'Mr. Mohit', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using software.'},
   {id:'c8', sno:8, firm:'Star Dust Space Design',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mr. Vinod Kumar S.', contactNumber:'7411751154', location:'Bengaluru',
     referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'Will use software after receiving machines.'},
   {id:'c9', sno:9, firm:'Arcwood',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mr. Sandeep Kumar Lohan', contactNumber:'9671500020', location:'Hisar – Haryana',
     referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using software.'},
   {id:'c10', sno:10, firm:'Majestic Kitchen World',
     products:['Kitchen','Wardrobe','Bathroom Vanities','TV Console','Interior Works'],
     contactName:'Mr. Sukhchain Singh Turka', contactNumber:'9416854045', location:'Ambala',
     referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using software.'},
   {id:'c11', sno:11, firm:'Kraft Homes',
     products:['Kitchen','Wardrobe','Bathroom Vanities','TV Console','Interior Works'],
     contactName:'Mr. Dhatsan', contactNumber:'9677780899', location:'Salem',
-    referredBy:'IndiaWood', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    referredBy:'IndiaWood', status:'About to Onboard', userIds:1, costPerUserId:6000, sharedWithCount:-1,
+    designs:14, quotationValue:2387962, proposalsFinalized:1219356, hardwareValue:66900, converted:'No',
+    experience:'Experience is good overall for this software. PI Also shared for onboard process.'},
   {id:'c12', sno:12, firm:'Shri Pyarelal Furniture',
     products:['Kitchen','Wardrobe','Bathroom Vanities','TV Console','Interior Works'],
     contactName:'Mr. Vivek Dhingra', contactNumber:'8755636434', location:'Kashipur – Uttarakhand',
     referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using software.'},
   {id:'c13', sno:13, firm:'Life Space Interiors',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mr. Arun', contactNumber:'8050298503', location:'Bengaluru',
-    referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    referredBy:'IndiaWood', status:'About to Onboard', userIds:1, costPerUserId:6000, sharedWithCount:1,
+    designs:2, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'Recently start use again and PI also shared for Onboard process.'},
   {id:'c14', sno:14, firm:'Ebony Kitchens',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mrs. Vandana Pandey', contactNumber:'7974209352', location:'Raipur',
     referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using software.'},
   {id:'c15', sno:15, firm:'Home Interior Modular',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mr. Hemant Pandey', contactNumber:'9343660429', location:'Bengaluru',
     referredBy:'IndiaWood', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:3, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'Recently starting software after designer joined, also shared PI for onboard process.'},
   {id:'c16', sno:16, firm:'Artenson Living',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mr. Veerak Mehta', contactNumber:'9096909889', location:'Pune',
     referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using software.'},
   {id:'c17', sno:17, firm:'UKD Industries',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mrs. Mohana', contactNumber:'9976090001', location:'Coimbatore',
-    referredBy:'Pavithran – Sales Team', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    referredBy:'Pavithran – Sales Team', status:'Demo Trial', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not started yet.'},
   {id:'c18', sno:18, firm:'Jyothi Industries',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Jyothi Raj', contactNumber:'9665505506', location:'Amravati – Maharashtra',
     referredBy:'Ramit Sir', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not started yet.'},
   {id:'c19', sno:19, firm:'Elite Industries',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mr. Varun Jain', contactNumber:'88105 90557', location:'Delhi-NCR',
-    referredBy:'By Myself (Rahul Dheeryan)', status:'About to Onboard', userIds:1, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    referredBy:'By Myself (Rahul Dheeryan)', status:'About to Onboard', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:2, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'PI shared for onboard process. Overall is okay to purchase this for use.'},
   {id:'c20', sno:20, firm:'Rajaguru Architecture & Interiors',
     products:['Architectural Spaces'],
     contactName:'Mr. Rajesh', contactNumber:'99446 40145', location:'Chennai',
     referredBy:'Pavithran – Sales Team', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using software.'},
   {id:'c21', sno:21, firm:'BMJ Interiorz',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mr. Manikanandan', contactNumber:'99402 52223', location:'Chennai',
     referredBy:'Pavithran – Sales Team', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'not using software.'},
   {id:'c22', sno:22, firm:'Maa Durga',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mr. Harish', contactNumber:'7408912777', location:'Lucknow',
-    referredBy:'Ramit Sir', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
-    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+    referredBy:'Ramit Sir', status:'Demo Trial', userIds:1, costPerUserId:6000, sharedWithCount:0,
+    designs:2, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No',
+    experience:'As per Ramit sir, he needs software demo for 6 months & Ramit sir asked me to proceed for 6 months demo for this portal.'},
   {id:'c23', sno:23, firm:'Suddham Invirotech Pvt Ltd',
     products:['Kitchen','Wardrobe','Interior Works'],
     contactName:'Mr. Kamal Singhal', contactNumber:'7408912777', location:'Noida',
     referredBy:'By Myself', status:'About to Onboard', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'Yes',
+    experience:'PI is shared for onboard process. New user for Manufacturing and wants it on urgent basis.'},
+  {id:'c1784894447708', sno:24, firm:'New Partner Firm',
+    products:[],
+    contactName:'', contactNumber:'', location:'', referredBy:'',
+    status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
     designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''}
 ];
 
@@ -408,14 +435,15 @@ function computeKPIs(){
     const s=(c.status||'').toLowerCase();
     if(s.includes('demo')) k.demo++;
     else if(s.includes('about to onboard')) k.aboutToOnboard++;
-    else if(s.includes('active') || s.includes('onboarded')) k.active++;
+    else if(s.includes('active') || s === 'onboard' || s.includes('onboarded')) k.active++;
     else if(s.includes('lost')) k.lost++;
     k.loginIds += Number(c.userIds)||0;
     k.drawings += Number(c.designs)||0;
     k.quoted += Number(c.quotationValue)||0;
     k.hardware += Number(c.hardwareValue)||0;
     if((c.converted||'').toLowerCase()==='yes') k.conversions++;
-    const share = Number(c.costPerUserId||0) / (1 + (Number(c.sharedWithCount)||0));
+    const shareDenom = 1 + (Number(c.sharedWithCount)||0);
+    const share = shareDenom === 0 ? 0 : Number(c.costPerUserId||0) / shareDenom;
     k.licenseCost += share * (Number(c.userIds)||0);
   });
   return k;
@@ -456,7 +484,7 @@ function matchesFilter(c){
   if(activeFilter==='Lead') return s.includes('lead');
   if(activeFilter==='Demo Trial') return s.includes('demo');
   if(activeFilter==='About to Onboard') return s.includes('about to onboard');
-  if(activeFilter==='Active / Onboarded') return s.includes('active') || s.includes('onboarded');
+  if(activeFilter==='Active / Onboarded') return s.includes('active') || s === 'onboard' || s.includes('onboarded');
   if(activeFilter==='Lost') return s.includes('lost');
   return true;
 }
@@ -465,7 +493,8 @@ function renderTable(){
   const body = document.getElementById('overviewBody');
   body.innerHTML = clients.filter(matchesFilter).map(c=>{
     const col = statusColor(c.status);
-    const share = (Number(c.costPerUserId||0)/(1+(Number(c.sharedWithCount)||0))) * (Number(c.userIds)||0);
+    const shareDenom = 1 + (Number(c.sharedWithCount)||0);
+    const share = (shareDenom === 0 ? 0 : Number(c.costPerUserId||0)/shareDenom) * (Number(c.userIds)||0);
     const convPct = c.quotationValue>0 ? ((c.hardwareValue/c.quotationValue)*100).toFixed(1)+'%' : '—';
     return `<tr>
       <td>${c.sno}</td>
