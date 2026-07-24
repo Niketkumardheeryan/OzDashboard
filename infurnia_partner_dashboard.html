@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Infurnia Partner Network — Ozone Overseas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root{
+    --navy:#002060;
+    --navy2:#0A2E6E;
+    --gold:#FFC000;
+    --gold-dark:#C99400;
+    --bg:#F3F5F9;
+    --card:#FFFFFF;
+    --ink:#1B2233;
+    --muted:#6B7488;
+    --line:#E3E7EF;
+    --green:#1E8E5A;
+    --red:#C4432B;
+    --blue:#2563A8;
+    --grey:#8A93A6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Calibri','Segoe UI',Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+  }
+  header{
+    background:linear-gradient(135deg,var(--navy) 0%, var(--navy2) 100%);
+    color:#fff;
+    padding:22px 32px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:12px;
+    border-bottom:4px solid var(--gold);
+  }
+  header h1{margin:0; font-size:22px; letter-spacing:.3px;}
+  header p{margin:4px 0 0; color:#C9D3EE; font-size:13px;}
+  .header-actions{display:flex; gap:10px; flex-wrap:wrap;}
+  button{
+    cursor:pointer; border:none; border-radius:8px;
+    font-family:inherit; font-size:13px; font-weight:600;
+    padding:9px 14px; transition:transform .12s ease, opacity .12s ease;
+  }
+  button:hover{transform:translateY(-1px);}
+  .btn-gold{background:var(--gold); color:var(--navy);}
+  .btn-outline{background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.5);}
+  .btn-outline:hover{background:rgba(255,255,255,0.12);}
+
+  .app{max-width:1280px; margin:0 auto; padding:24px 20px 60px;}
+
+  #storageBadge{
+    text-align:center; font-size:12px; padding:6px 0; color:var(--muted);
+  }
+
+  /* KPI strip */
+  .kpi-strip{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+    margin-bottom:10px;
+  }
+  .kpi{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px;
+  }
+  .kpi .label{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;}
+  .kpi .value{font-size:22px; font-weight:800; color:var(--navy); margin-top:4px;}
+  .hero-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-bottom:20px;
+  }
+  .hero{
+    border-radius:12px; padding:18px 20px; color:#fff;
+    background:linear-gradient(135deg,var(--navy),var(--navy2));
+    border:1px solid var(--navy);
+  }
+  .hero.gold{background:linear-gradient(135deg,#8a6400,var(--gold-dark)); border-color:var(--gold-dark);}
+  .hero .label{font-size:12px; opacity:.85; text-transform:uppercase; letter-spacing:.4px;}
+  .hero .value{font-size:26px; font-weight:800; margin-top:6px;}
+
+  /* Filter chips */
+  .filters{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;}
+  .chip{
+    padding:7px 14px; border-radius:999px; font-size:12.5px; font-weight:600;
+    border:1px solid var(--line); background:#fff; color:var(--muted); cursor:pointer;
+  }
+  .chip.active{background:var(--navy); color:#fff; border-color:var(--navy);}
+
+  /* Overview table */
+  .table-wrap{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    overflow-x:auto; margin-bottom:26px;
+  }
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  thead th{
+    background:var(--navy); color:#fff; text-align:left; padding:10px 12px;
+    font-size:11.5px; text-transform:uppercase; letter-spacing:.3px; white-space:nowrap;
+  }
+  tbody td{padding:9px 12px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  tbody tr:nth-child(even){background:#F8FAFD;}
+  tbody tr:hover{background:#EFF3FB;}
+  .status-pill{
+    display:inline-block; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;
+  }
+
+  /* Cards */
+  .cards{display:grid; grid-template-columns:repeat(2,1fr); gap:16px;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px;
+    position:relative;
+  }
+  .card .top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .card h3{margin:0 0 4px; font-size:15.5px; color:var(--navy); line-height:1.3;}
+  .card .sub{font-size:12px; color:var(--muted); margin-bottom:8px;}
+  .tags{display:flex; flex-wrap:wrap; gap:5px; margin:6px 0 10px;}
+  .tag{
+    font-size:10.5px; background:#EEF1FA; color:var(--navy2); border-radius:6px;
+    padding:2px 7px; font-weight:600;
+  }
+  .status-input{
+    width:150px; border:1px solid var(--line); border-radius:7px; padding:5px 9px;
+    font-size:12.5px; font-weight:700; text-align:center;
+  }
+  .remove-btn{
+    background:transparent; border:none; color:var(--red); font-size:12px; font-weight:700; padding:2px 6px;
+  }
+  .field-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:12px;
+  }
+  .field{display:flex; flex-direction:column; gap:3px;}
+  .field label{font-size:11px; color:var(--muted); font-weight:600;}
+  .field input, .field select{
+    border:1px solid var(--line); border-radius:7px; padding:7px 9px; font-size:13px; font-family:inherit;
+  }
+  .field.full{grid-column:1 / -1;}
+  textarea{
+    width:100%; border:1px solid var(--line); border-radius:7px; padding:8px 9px;
+    font-size:13px; font-family:inherit; resize:vertical; min-height:52px;
+  }
+  .card-footer{
+    display:flex; justify-content:space-between; align-items:center; margin-top:12px;
+    font-size:11px; color:var(--muted);
+  }
+  .saved-flash{color:var(--green); font-weight:700; opacity:0; transition:opacity .3s;}
+  .saved-flash.show{opacity:1;}
+
+  .add-row{text-align:center; margin:20px 0 8px;}
+
+  .footnote{text-align:center; font-size:11.5px; color:var(--muted); margin-top:30px;}
+
+  @media (max-width:900px){
+    .kpi-strip{grid-template-columns:repeat(2,1fr);}
+    .hero-row{grid-template-columns:1fr;}
+    .cards{grid-template-columns:1fr;}
+    .field-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Infurnia Partner Network — Ozone Overseas</h1>
+    <p>Ergozone / KFF · Dealer &amp; partner pipeline tracker across the Infurnia portal</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn-outline" id="exportBtn">⬇ Export data (JSON)</button>
+    <button class="btn-outline" id="copyBtn">📋 Copy data as text</button>
+    <button class="btn-gold" id="addPartnerBtn">+ Add Partner</button>
+  </div>
+</header>
+
+<div class="app">
+  <div id="storageBadge">● No unsaved changes right now</div>
+
+  <div class="kpi-strip" id="kpiStrip"></div>
+  <div class="hero-row" id="heroRow"></div>
+
+  <div class="filters" id="filterChips"></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Dealer / Partner</th>
+          <th>Status</th>
+          <th>Login Qty (User IDs)</th>
+          <th>License Cost (Share)</th>
+          <th>Quotation Value</th>
+          <th>Hardware Confirmed</th>
+          <th>Conversion %</th>
+          <th>Converted</th>
+        </tr>
+      </thead>
+      <tbody id="overviewBody"></tbody>
+    </table>
+  </div>
+
+  <div class="cards" id="cardGrid"></div>
+
+  <div class="add-row">
+    <button class="btn-gold" id="addPartnerBtn2">+ Add Partner</button>
+  </div>
+
+  <div class="footnote">
+    Values in ₹ (INR). Conversion % = Ozone hardware value confirmed ÷ quotation value shared. License Cost (Share) = Cost per User ID ÷ (1 + number shared with).
+  </div>
+</div>
+
+<textarea id="copyArea" style="position:fixed; top:-9999px; left:-9999px;"></textarea>
+
+<script>
+const STORAGE_KEY = 'infurnia-partner-dashboard-v2';
+
+const seedData = [
+  {id:'c1', sno:1, firm:'JET — A unit of ARJN Woodmart',
+    products:['Kitchen','Wardrobe','Office Furniture','Doors','Interior Works','Bathroom Vanities','TV Console'],
+    contactName:'Mr. Himalaya', contactNumber:'63964 83627', location:'Khekra, Baghpat – U.P.',
+    referredBy:'Mr. Prateek Jain', status:'About to Onboard', userIds:1, costPerUserId:0, sharedWithCount:1,
+    designs:43, quotationValue:2847000, proposalsFinalized:1971000, hardwareValue:79649, converted:'Yes',
+    experience:'Since May- designer is not there, rest feedback is good.\nAlso, payment received for onboarding process.'},
+  {id:'c2', sno:2, firm:'AAKAR Interior Hingewadi',
+    products:['Kitchen','Wardrobe','Office Furniture','Beds','Interior Works','Bathroom Vanities','TV Console'],
+    contactName:'Mr. Abhishek Tiwari', contactNumber:'8007123466', location:'Pune',
+    referredBy:'Mr. Kunal Rajput', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c3', sno:3, firm:'Bright World Infrastructure and Interiors Pvt. Ltd.',
+    products:['Kitchen','Wardrobe','Interior Solution','Civil & Construction'],
+    contactName:'Faraz Badar', contactNumber:'7827748078', location:'Gurugram',
+    referredBy:'Mr. Shishir Swain', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c4', sno:4, firm:'Novitat Furniture Private Limited (Existing User of Infurnia)',
+    products:['Kitchen','Wardrobe','Interior Works','Bathroom Vanities','TV Console'],
+    contactName:'Mr. Harpal Singh', contactNumber:'7300039863', location:'Jaipur',
+    referredBy:'Ajay Kumar Jangid', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c5', sno:5, firm:'Mark Geoworks Pvt Ltd, Erode',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mr. Anish', contactNumber:'9597100959', location:'Coimbatore',
+    referredBy:'Mr. Pavithran M', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c6', sno:6, firm:'Lords Interior',
+    products:[],
+    contactName:'Mr. Pankaj Sachdev', contactNumber:'90222 73795', location:'Pune',
+    referredBy:'Kunal Rajput', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c7', sno:7, firm:'Ganesh Hardware Sanitary',
+    products:['Dealer','Interior Works','Kitchen','Wardrobe'],
+    contactName:'Mr. Piyush Gupta', contactNumber:'9717700759', location:'Meerut',
+    referredBy:'Mr. Mohit', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c8', sno:8, firm:'Star Dust Space Design',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mr. Vinod Kumar S.', contactNumber:'7411751154', location:'Bengaluru',
+    referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c9', sno:9, firm:'Arcwood',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mr. Sandeep Kumar Lohan', contactNumber:'9671500020', location:'Hisar – Haryana',
+    referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c10', sno:10, firm:'Majestic Kitchen World',
+    products:['Kitchen','Wardrobe','Bathroom Vanities','TV Console','Interior Works'],
+    contactName:'Mr. Sukhchain Singh Turka', contactNumber:'9416854045', location:'Ambala',
+    referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c11', sno:11, firm:'Kraft Homes',
+    products:['Kitchen','Wardrobe','Bathroom Vanities','TV Console','Interior Works'],
+    contactName:'Mr. Dhatsan', contactNumber:'9677780899', location:'Salem',
+    referredBy:'IndiaWood', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c12', sno:12, firm:'Shri Pyarelal Furniture',
+    products:['Kitchen','Wardrobe','Bathroom Vanities','TV Console','Interior Works'],
+    contactName:'Mr. Vivek Dhingra', contactNumber:'8755636434', location:'Kashipur – Uttarakhand',
+    referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c13', sno:13, firm:'Life Space Interiors',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mr. Arun', contactNumber:'8050298503', location:'Bengaluru',
+    referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c14', sno:14, firm:'Ebony Kitchens',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mrs. Vandana Pandey', contactNumber:'7974209352', location:'Raipur',
+    referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c15', sno:15, firm:'Home Interior Modular',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mr. Hemant Pandey', contactNumber:'9343660429', location:'Bengaluru',
+    referredBy:'IndiaWood', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c16', sno:16, firm:'Artenson Living',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mr. Veerak Mehta', contactNumber:'9096909889', location:'Pune',
+    referredBy:'IndiaWood', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c17', sno:17, firm:'UKD Industries',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mrs. Mohana', contactNumber:'9976090001', location:'Coimbatore',
+    referredBy:'Pavithran – Sales Team', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c18', sno:18, firm:'Jyothi Industries',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Jyothi Raj', contactNumber:'9665505506', location:'Amravati – Maharashtra',
+    referredBy:'Ramit Sir', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c19', sno:19, firm:'Elite Industries',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mr. Varun Jain', contactNumber:'88105 90557', location:'Delhi-NCR',
+    referredBy:'By Myself (Rahul Dheeryan)', status:'About to Onboard', userIds:1, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c20', sno:20, firm:'Rajaguru Architecture & Interiors',
+    products:['Architectural Spaces'],
+    contactName:'Mr. Rajesh', contactNumber:'99446 40145', location:'Chennai',
+    referredBy:'Pavithran – Sales Team', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c21', sno:21, firm:'BMJ Interiorz',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mr. Manikanandan', contactNumber:'99402 52223', location:'Chennai',
+    referredBy:'Pavithran – Sales Team', status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c22', sno:22, firm:'Maa Durga',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mr. Harish', contactNumber:'7408912777', location:'Lucknow',
+    referredBy:'Ramit Sir', status:'Demo Trial', userIds:1, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''},
+  {id:'c23', sno:23, firm:'Suddham Invirotech Pvt Ltd',
+    products:['Kitchen','Wardrobe','Interior Works'],
+    contactName:'Mr. Kamal Singhal', contactNumber:'7408912777', location:'Noida',
+    referredBy:'By Myself', status:'About to Onboard', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''}
+];
+
+let clients = [];
+let activeFilter = 'All';
+let isDirty = false;
+let hasClaudeStorage = (typeof window !== 'undefined' && !!window.storage && typeof window.storage.get === 'function');
+
+function statusColor(status){
+  const s = (status||'').toLowerCase();
+  if(s.includes('active') || s.includes('onboard') && !s.includes('about')) return {bg:'#E3F5EC', fg:'#1E8E5A'};
+  if(s.includes('about to onboard')) return {bg:'#FFF3D6', fg:'#B27B00'};
+  if(s.includes('demo')) return {bg:'#E6EEFB', fg:'#2563A8'};
+  if(s.includes('lost') || s.includes('risk') || s.includes('pause')) return {bg:'#FBEAE7', fg:'#C4432B'};
+  return {bg:'#EEF0F4', fg:'#6B7488'}; // Lead / default
+}
+
+function fmtINR(n){
+  n = Number(n)||0;
+  return '₹' + n.toLocaleString('en-IN');
+}
+
+async function loadData(){
+  clients = JSON.parse(JSON.stringify(seedData));
+  if(hasClaudeStorage){
+    try{
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if(res && res.value){ clients = JSON.parse(res.value); }
+    }catch(e){ /* use seed */ }
+  }
+  isDirty = false;
+  updateStorageBadge();
+  render();
+}
+
+async function persist(){
+  isDirty = true;
+  updateStorageBadge();
+  if(hasClaudeStorage){
+    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(clients), false); }
+    catch(e){ hasClaudeStorage = false; }
+  }
+}
+
+function updateStorageBadge(){
+  const el = document.getElementById('storageBadge');
+  if(!el) return;
+  if(isDirty && !hasClaudeStorage){
+    el.textContent = '⚠ Unsaved changes — click "Export data (JSON)" or "Copy data as text" before closing this tab';
+    el.style.color = '#B27B00';
+  } else if(hasClaudeStorage){
+    el.textContent = '● Auto-saving to this app\'s storage';
+    el.style.color = '#1E8E5A';
+  } else {
+    el.textContent = '● No unsaved changes right now';
+    el.style.color = '#6B7488';
+  }
+}
+
+window.addEventListener('beforeunload', function(e){
+  if(isDirty && !hasClaudeStorage){
+    e.preventDefault(); e.returnValue = ''; return '';
+  }
+});
+
+function computeKPIs(){
+  const k = {total:clients.length, demo:0, aboutToOnboard:0, active:0, lost:0,
+    loginIds:0, drawings:0, quoted:0, conversions:0, hardware:0, licenseCost:0};
+  clients.forEach(c=>{
+    const s=(c.status||'').toLowerCase();
+    if(s.includes('demo')) k.demo++;
+    else if(s.includes('about to onboard')) k.aboutToOnboard++;
+    else if(s.includes('active') || s.includes('onboarded')) k.active++;
+    else if(s.includes('lost')) k.lost++;
+    k.loginIds += Number(c.userIds)||0;
+    k.drawings += Number(c.designs)||0;
+    k.quoted += Number(c.quotationValue)||0;
+    k.hardware += Number(c.hardwareValue)||0;
+    if((c.converted||'').toLowerCase()==='yes') k.conversions++;
+    const share = Number(c.costPerUserId||0) / (1 + (Number(c.sharedWithCount)||0));
+    k.licenseCost += share * (Number(c.userIds)||0);
+  });
+  return k;
+}
+
+function renderKPIs(){
+  const k = computeKPIs();
+  const strip = document.getElementById('kpiStrip');
+  strip.innerHTML = `
+    <div class="kpi"><div class="label">Total Inquiries</div><div class="value">${k.total}</div></div>
+    <div class="kpi"><div class="label">Demo Trial</div><div class="value">${k.demo}</div></div>
+    <div class="kpi"><div class="label">About to Onboard</div><div class="value">${k.aboutToOnboard}</div></div>
+    <div class="kpi"><div class="label">Active / Onboarded</div><div class="value">${k.active}</div></div>
+    <div class="kpi"><div class="label">Login IDs Issued</div><div class="value">${k.loginIds}</div></div>
+    <div class="kpi"><div class="label">Drawings Created</div><div class="value">${k.drawings}</div></div>
+    <div class="kpi"><div class="label">Amount Quoted</div><div class="value">${fmtINR(k.quoted)}</div></div>
+    <div class="kpi"><div class="label">Conversions Done</div><div class="value">${k.conversions}</div></div>
+  `;
+  const hero = document.getElementById('heroRow');
+  hero.innerHTML = `
+    <div class="hero gold"><div class="label">Ozone Hardware Confirmed</div><div class="value">${fmtINR(k.hardware)}</div></div>
+    <div class="hero"><div class="label">Net ROI (Hardware − License Cost)</div><div class="value">${fmtINR(k.hardware - k.licenseCost)}</div></div>
+  `;
+}
+
+function renderFilters(){
+  const options = ['All','Lead','Demo Trial','About to Onboard','Active / Onboarded','Lost'];
+  const wrap = document.getElementById('filterChips');
+  wrap.innerHTML = options.map(o=>`<span class="chip ${o===activeFilter?'active':''}" data-filter="${o}">${o}</span>`).join('');
+  wrap.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{ activeFilter = chip.dataset.filter; render(); });
+  });
+}
+
+function matchesFilter(c){
+  if(activeFilter==='All') return true;
+  const s=(c.status||'').toLowerCase();
+  if(activeFilter==='Lead') return s.includes('lead');
+  if(activeFilter==='Demo Trial') return s.includes('demo');
+  if(activeFilter==='About to Onboard') return s.includes('about to onboard');
+  if(activeFilter==='Active / Onboarded') return s.includes('active') || s.includes('onboarded');
+  if(activeFilter==='Lost') return s.includes('lost');
+  return true;
+}
+
+function renderTable(){
+  const body = document.getElementById('overviewBody');
+  body.innerHTML = clients.filter(matchesFilter).map(c=>{
+    const col = statusColor(c.status);
+    const share = (Number(c.costPerUserId||0)/(1+(Number(c.sharedWithCount)||0))) * (Number(c.userIds)||0);
+    const convPct = c.quotationValue>0 ? ((c.hardwareValue/c.quotationValue)*100).toFixed(1)+'%' : '—';
+    return `<tr>
+      <td>${c.sno}</td>
+      <td>${c.firm}</td>
+      <td><span class="status-pill" style="background:${col.bg};color:${col.fg}">${c.status||'—'}</span></td>
+      <td>${c.userIds}</td>
+      <td>${fmtINR(share)}</td>
+      <td>${fmtINR(c.quotationValue)}</td>
+      <td>${fmtINR(c.hardwareValue)}</td>
+      <td>${convPct}</td>
+      <td>${c.converted}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCards(){
+  const grid = document.getElementById('cardGrid');
+  grid.innerHTML = clients.filter(matchesFilter).map(c=>{
+    const col = statusColor(c.status);
+    const tags = (c.products||[]).map(p=>`<span class="tag">${p}</span>`).join('');
+    return `<div class="card" data-id="${c.id}">
+      <div class="top">
+        <div>
+          <h3>${c.sno}. ${c.firm}</h3>
+          <div class="sub">${c.contactName} · ${c.contactNumber} · ${c.location}<br>Referred by: ${c.referredBy}</div>
+        </div>
+        <button class="remove-btn" data-action="remove">✕ Remove</button>
+      </div>
+      <div class="tags">${tags}</div>
+      <input class="status-input" data-field="status" value="${c.status||''}" style="background:${col.bg};color:${col.fg}">
+      <div class="field-grid">
+        <div class="field"><label>Login Credential Qty</label><input type="number" data-field="userIds" value="${c.userIds}"></div>
+        <div class="field"><label>Cost per User ID (₹)</label><input type="number" data-field="costPerUserId" value="${c.costPerUserId}"></div>
+        <div class="field"><label>Shared With (other dealers)</label><input type="number" data-field="sharedWithCount" value="${c.sharedWithCount}"></div>
+        <div class="field"><label>Drawings Created</label><input type="number" data-field="designs" value="${c.designs}"></div>
+        <div class="field"><label>Quotation Value (₹)</label><input type="number" data-field="quotationValue" value="${c.quotationValue}"></div>
+        <div class="field"><label>Proposals Finalized (₹)</label><input type="number" data-field="proposalsFinalized" value="${c.proposalsFinalized}"></div>
+        <div class="field"><label>Ozone Hardware Confirmed (₹)</label><input type="number" data-field="hardwareValue" value="${c.hardwareValue}"></div>
+        <div class="field">
+          <label>Converted</label>
+          <select data-field="converted">
+            <option value="Yes" ${c.converted==='Yes'?'selected':''}>Yes</option>
+            <option value="No" ${c.converted==='No'?'selected':''}>No</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Partner Experience</label>
+          <textarea data-field="experience">${c.experience||''}</textarea>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span>ID: ${c.id}</span>
+        <span class="saved-flash">Saved ✓</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.card').forEach(cardEl=>{
+    const id = cardEl.dataset.id;
+    cardEl.querySelectorAll('[data-field]').forEach(inputEl=>{
+      inputEl.addEventListener('change', ()=>{
+        const client = clients.find(c=>c.id===id);
+        const field = inputEl.dataset.field;
+        let val = inputEl.value;
+        if(inputEl.type==='number') val = Number(val)||0;
+        client[field] = val;
+        persist();
+        renderKPIs(); renderTable();
+        const flash = cardEl.querySelector('.saved-flash');
+        flash.classList.add('show');
+        setTimeout(()=>flash.classList.remove('show'),900);
+        if(field==='status'){
+          const col = statusColor(val);
+          inputEl.style.background = col.bg; inputEl.style.color = col.fg;
+        }
+      });
+    });
+    cardEl.querySelector('[data-action="remove"]').addEventListener('click', ()=>{
+      if(!confirm('Remove this partner from the tracker?')) return;
+      clients = clients.filter(c=>c.id!==id);
+      persist();
+      render();
+    });
+  });
+}
+
+function render(){
+  renderKPIs();
+  renderFilters();
+  renderTable();
+  renderCards();
+}
+
+function addPartner(){
+  const nextSno = clients.length ? Math.max(...clients.map(c=>c.sno))+1 : 1;
+  const newId = 'c' + Date.now();
+  clients.push({
+    id:newId, sno:nextSno, firm:'New Partner Firm', products:[],
+    contactName:'', contactNumber:'', location:'', referredBy:'',
+    status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
+    designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''
+  });
+  persist();
+  render();
+}
+
+document.getElementById('addPartnerBtn').addEventListener('click', addPartner);
+document.getElementById('addPartnerBtn2').addEventListener('click', addPartner);
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  try{
+    const blob = new Blob([JSON.stringify(clients,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'infurnia_partner_data.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }catch(e){
+    alert('Export blocked in this preview — use "Copy data as text" instead.');
+  }
+});
+
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  const area = document.getElementById('copyArea');
+  area.style.position='fixed'; area.style.top='40px'; area.style.left='50%';
+  area.style.transform='translateX(-50%)'; area.style.zIndex='9999';
+  area.style.width='min(600px,90vw)'; area.style.height='300px';
+  area.style.background='#fff'; area.style.border='2px solid #002060'; area.style.borderRadius='10px';
+  area.style.padding='12px'; area.style.fontSize='12px';
+  area.value = JSON.stringify(clients,null,2);
+  area.focus(); area.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  setTimeout(()=>{ area.style.top='-9999px'; area.style.left='-9999px'; area.style.transform='none'; },8000);
+});
+
+loadData();
+</script>
+</body>
+</html>
