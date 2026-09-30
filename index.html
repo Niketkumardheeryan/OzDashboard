@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+t<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -171,10 +171,13 @@
     <p>Ergozone / KFF · Dealer &amp; partner pipeline tracker across the Infurnia portal</p>
   </div>
   <div class="header-actions">
-    <button class="btn-outline" id="exportBtn">⬇ Export data (JSON)</button>
-    <button class="btn-outline" id="copyBtn">📋 Copy data as text</button>
+    <button class="btn-outline" id="loadExcelBtn" type="button">📂 Load Excel</button>
+    <button class="btn-outline" id="saveExcelBtn" type="button">💾 Save to Excel</button>
+    <button class="btn-outline" id="exportBtn">⬇ Export JSON</button>
+    <button class="btn-outline" id="copyBtn">📋 Copy as text</button>
     <button class="btn-gold" id="addPartnerBtn">+ Add Partner</button>
   </div>
+  <input type="file" id="excelFileInput" accept=".xlsx,.xls" hidden>
 </header>
 
 <div class="app">
@@ -211,14 +214,29 @@
   </div>
 
   <div class="footnote">
-    Values in ₹ (INR). Conversion % = Ozone hardware value confirmed ÷ quotation value shared. License Cost (Share) = Cost per User ID ÷ (1 + number shared with).
+    Values in ₹ (INR). Conversion % = Ozone hardware value confirmed ÷ quotation value shared. License Cost (Share) = Cost per User ID ÷ (1 + number shared with).<br>
+    Partners 1–23 are built into this page. Partners 24+ save to the server on Vercel (Vercel KV), or to <strong>oz.xlsx</strong> when running locally without KV.
   </div>
 </div>
 
 <textarea id="copyArea" style="position:fixed; top:-9999px; left:-9999px;"></textarea>
-
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 const STORAGE_KEY = 'infurnia-partner-dashboard-v3';
+const EXTRA_STORAGE_KEY = 'infurnia-partner-extra-v1';
+const EXCEL_FILE = 'oz.xlsx';
+const API_PARTNERS = '/api/partners';
+const SEED_PARTNER_COUNT = 23;
+
+const EXCEL_COLUMNS = [
+  'id', 'sno', 'firm', 'products', 'contactName', 'contactNumber', 'location',
+  'referredBy', 'status', 'userIds', 'costPerUserId', 'sharedWithCount',
+  'designs', 'quotationValue', 'proposalsFinalized', 'hardwareValue', 'converted', 'experience'
+];
+const NUMERIC_FIELDS = new Set([
+  'sno', 'userIds', 'costPerUserId', 'sharedWithCount', 'designs',
+  'quotationValue', 'proposalsFinalized', 'hardwareValue'
+]);
 
 const seedData = [
   {id:'c1', sno:1, firm:'JET — A unit of ARJN Woodmart',
@@ -364,7 +382,152 @@ const seedData = [
 let clients = [];
 let activeFilter = 'All';
 let isDirty = false;
+let excelLoadedFromServer = false;
+let useCloudApi = false;
+let apiSaveTimer = null;
+const seedIdSet = new Set();
 let hasClaudeStorage = (typeof window !== 'undefined' && !!window.storage && typeof window.storage.get === 'function');
+
+function isExtraPartner(c){
+  return Number(c.sno) > SEED_PARTNER_COUNT || !seedIdSet.has(c.id);
+}
+
+function partnerFromRow(row){
+  const p = {};
+  EXCEL_COLUMNS.forEach(col=>{
+    let val = row[col];
+    if(val === undefined || val === null) val = '';
+    if(NUMERIC_FIELDS.has(col)) val = Number(val) || 0;
+    else val = String(val);
+    if(col === 'products'){
+      p.products = val ? String(val).split('|').map(s=>s.trim()).filter(Boolean) : [];
+    } else {
+      p[col] = val;
+    }
+  });
+  if(!p.id) p.id = 'c' + Date.now() + Math.random().toString(36).slice(2, 6);
+  if(!p.converted) p.converted = 'No';
+  if(!p.status) p.status = 'Lead';
+  return p;
+}
+
+function partnerToRow(c){
+  const row = {};
+  EXCEL_COLUMNS.forEach(col=>{
+    if(col === 'products') row[col] = (c.products || []).join(' | ');
+    else row[col] = c[col] ?? (NUMERIC_FIELDS.has(col) ? 0 : '');
+  });
+  return row;
+}
+
+function parseExcelArrayBuffer(buf){
+  const wb = XLSX.read(buf, {type:'array'});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(sheet, {defval:''});
+}
+
+function mergeExtraPartners(extraList){
+  const byId = new Map();
+  extraList.filter(isExtraPartner).forEach(p=>byId.set(p.id, p));
+  clients = JSON.parse(JSON.stringify(seedData));
+  byId.forEach(p=>clients.push(p));
+  clients.sort((a,b)=>(Number(a.sno)||0)-(Number(b.sno)||0));
+}
+
+async function loadExtrasFromApi(){
+  try{
+    const res = await fetch(API_PARTNERS, {cache:'no-store'});
+    if(!res.ok) return false;
+    useCloudApi = res.headers.get('X-Storage') === 'vercel-kv';
+    const extras = await res.json();
+    if(!Array.isArray(extras)) return false;
+    mergeExtraPartners(extras);
+    try{ localStorage.setItem(EXTRA_STORAGE_KEY, JSON.stringify(extras)); }catch(e){}
+    return useCloudApi || extras.length > 0;
+  }catch(e){
+    return false;
+  }
+}
+
+async function saveExtrasToApi(){
+  if(!useCloudApi) return false;
+  const extras = clients.filter(isExtraPartner);
+  try{
+    const res = await fetch(API_PARTNERS, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(extras),
+    });
+    if(!res.ok) return false;
+    isDirty = false;
+    updateStorageBadge();
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function scheduleApiSave(){
+  if(!useCloudApi) return;
+  clearTimeout(apiSaveTimer);
+  apiSaveTimer = setTimeout(()=>{ saveExtrasToApi(); }, 400);
+}
+
+async function loadExcelFromUrl(){
+  try{
+    const res = await fetch(EXCEL_FILE, {cache:'no-store'});
+    if(!res.ok) return false;
+    const buf = await res.arrayBuffer();
+    const rows = parseExcelArrayBuffer(buf);
+    const extras = rows.map(partnerFromRow).filter(r=>r.firm || r.sno > SEED_PARTNER_COUNT);
+    mergeExtraPartners(extras);
+    excelLoadedFromServer = true;
+    try{ localStorage.setItem(EXTRA_STORAGE_KEY, JSON.stringify(extras)); }catch(e){}
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function loadExtrasFromLocalStorage(){
+  try{
+    const raw = localStorage.getItem(EXTRA_STORAGE_KEY);
+    if(!raw) return false;
+    const extras = JSON.parse(raw);
+    if(!Array.isArray(extras) || !extras.length) return false;
+    mergeExtraPartners(extras);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function saveExtrasToLocalStorage(){
+  const extras = clients.filter(isExtraPartner);
+  try{ localStorage.setItem(EXTRA_STORAGE_KEY, JSON.stringify(extras)); }catch(e){}
+}
+
+function downloadExcelFile(){
+  const extras = clients.filter(isExtraPartner);
+  const rows = extras.map(partnerToRow);
+  const ws = XLSX.utils.json_to_sheet(rows, {header: EXCEL_COLUMNS});
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Partners');
+  XLSX.writeFile(wb, EXCEL_FILE);
+  isDirty = false;
+  updateStorageBadge();
+}
+
+function applyExcelBuffer(buf){
+  const rows = parseExcelArrayBuffer(buf);
+  const extras = rows.map(partnerFromRow).filter(r=>r.firm || Number(r.sno) > SEED_PARTNER_COUNT);
+  mergeExtraPartners(extras);
+  saveExtrasToLocalStorage();
+  isDirty = false;
+  excelLoadedFromServer = true;
+  updateStorageBadge();
+  render();
+}
 
 function statusColor(status){
   const s = (status||'').toLowerCase();
@@ -381,21 +544,38 @@ function fmtINR(n){
 }
 
 async function loadData(){
+  seedIdSet.clear();
+  seedData.forEach(c=>seedIdSet.add(c.id));
   clients = JSON.parse(JSON.stringify(seedData));
+
   if(hasClaudeStorage){
     try{
       const res = await window.storage.get(STORAGE_KEY, false);
       if(res && res.value){ clients = JSON.parse(res.value); }
     }catch(e){ /* use seed */ }
+  } else {
+    const fromApi = await loadExtrasFromApi();
+    if(!fromApi){
+      const fromExcel = await loadExcelFromUrl();
+      if(!fromExcel) loadExtrasFromLocalStorage();
+    }
   }
+
   isDirty = false;
   updateStorageBadge();
   render();
 }
 
 async function persist(){
-  isDirty = true;
-  updateStorageBadge();
+  saveExtrasToLocalStorage();
+  if(useCloudApi){
+    isDirty = true;
+    updateStorageBadge();
+    scheduleApiSave();
+  } else {
+    isDirty = true;
+    updateStorageBadge();
+  }
   if(hasClaudeStorage){
     try{ await window.storage.set(STORAGE_KEY, JSON.stringify(clients), false); }
     catch(e){ hasClaudeStorage = false; }
@@ -405,14 +585,26 @@ async function persist(){
 function updateStorageBadge(){
   const el = document.getElementById('storageBadge');
   if(!el) return;
-  if(isDirty && !hasClaudeStorage){
-    el.textContent = '⚠ Unsaved changes — click "Export data (JSON)" or "Copy data as text" before closing this tab';
-    el.style.color = '#B27B00';
-  } else if(hasClaudeStorage){
+  const extraCount = clients.filter(isExtraPartner).length;
+  if(hasClaudeStorage){
     el.textContent = '● Auto-saving to this app\'s storage';
     el.style.color = '#1E8E5A';
+  } else if(useCloudApi){
+    el.textContent = isDirty
+      ? `● Saving ${extraCount} extra partner(s) to server…`
+      : `● ${extraCount} extra partner(s) on server (Vercel KV) · refresh keeps data`;
+    el.style.color = isDirty ? '#B27B00' : '#1E8E5A';
+  } else if(isDirty){
+    el.textContent = '⚠ Partners 24+ changed — click "Save to Excel" and replace oz.xlsx in this folder (backup in browser storage)';
+    el.style.color = '#B27B00';
+  } else if(excelLoadedFromServer){
+    el.textContent = `● Loaded ${extraCount} partner(s) from ${EXCEL_FILE} · partners 1–${SEED_PARTNER_COUNT} from page`;
+    el.style.color = '#1E8E5A';
+  } else if(extraCount){
+    el.textContent = `● ${extraCount} extra partner(s) from browser storage — use "Load Excel" or run a local server to read ${EXCEL_FILE}`;
+    el.style.color = '#2563A8';
   } else {
-    el.textContent = '● No unsaved changes right now';
+    el.textContent = `● Partners 1–${SEED_PARTNER_COUNT} ready · add partner 24+ then save to ${EXCEL_FILE}`;
     el.style.color = '#6B7488';
   }
 }
@@ -521,6 +713,14 @@ function renderCards(){
       <div class="tags">${tags}</div>
       <input class="status-input" data-field="status" value="${c.status||''}" style="background:${col.bg};color:${col.fg}">
       <div class="field-grid">
+        ${isExtraPartner(c) ? `
+        <div class="field full"><label>Firm / Dealer name</label><input type="text" data-field="firm" value="${(c.firm||'').replace(/"/g,'&quot;')}"></div>
+        <div class="field"><label>Contact name</label><input type="text" data-field="contactName" value="${(c.contactName||'').replace(/"/g,'&quot;')}"></div>
+        <div class="field"><label>Contact number</label><input type="text" data-field="contactNumber" value="${(c.contactNumber||'').replace(/"/g,'&quot;')}"></div>
+        <div class="field"><label>Location</label><input type="text" data-field="location" value="${(c.location||'').replace(/"/g,'&quot;')}"></div>
+        <div class="field full"><label>Referred by</label><input type="text" data-field="referredBy" value="${(c.referredBy||'').replace(/"/g,'&quot;')}"></div>
+        <div class="field full"><label>Products (separate with |)</label><input type="text" data-field="products" value="${(c.products||[]).join(' | ').replace(/"/g,'&quot;')}"></div>
+        ` : ''}
         <div class="field"><label>Login Credential Qty</label><input type="number" data-field="userIds" value="${c.userIds}"></div>
         <div class="field"><label>Cost per User ID (₹)</label><input type="number" data-field="costPerUserId" value="${c.costPerUserId}"></div>
         <div class="field"><label>Shared With (other dealers)</label><input type="number" data-field="sharedWithCount" value="${c.sharedWithCount}"></div>
@@ -554,8 +754,18 @@ function renderCards(){
         const client = clients.find(c=>c.id===id);
         const field = inputEl.dataset.field;
         let val = inputEl.value;
-        if(inputEl.type==='number') val = Number(val)||0;
-        client[field] = val;
+        if(field === 'products'){
+          client.products = val.split('|').map(s=>s.trim()).filter(Boolean);
+        } else if(inputEl.type==='number') {
+          val = Number(val)||0;
+          client[field] = val;
+        } else {
+          client[field] = val;
+        }
+        if(field === 'firm'){
+          render();
+          return;
+        }
         persist();
         renderKPIs(); renderTable();
         const flash = cardEl.querySelector('.saved-flash');
@@ -598,6 +808,31 @@ function addPartner(){
 
 document.getElementById('addPartnerBtn').addEventListener('click', addPartner);
 document.getElementById('addPartnerBtn2').addEventListener('click', addPartner);
+
+document.getElementById('saveExcelBtn').addEventListener('click', ()=>{
+  if(typeof XLSX === 'undefined'){
+    alert('Excel library did not load. Check your internet connection and refresh.');
+    return;
+  }
+  downloadExcelFile();
+});
+
+document.getElementById('loadExcelBtn').addEventListener('click', ()=>{
+  document.getElementById('excelFileInput').click();
+});
+
+document.getElementById('excelFileInput').addEventListener('change', (ev)=>{
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = '';
+  if(!file) return;
+  if(typeof XLSX === 'undefined'){
+    alert('Excel library did not load. Check your internet connection and refresh.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ()=> applyExcelBuffer(reader.result);
+  reader.readAsArrayBuffer(file);
+});
 
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   try{
