@@ -1,1 +1,1 @@
-# OzDashboard
+# OzDashboard 2.0
