@@ -1,4 +1,4 @@
-t<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -215,7 +215,7 @@ t<!DOCTYPE html>
 
   <div class="footnote">
     Values in ₹ (INR). Conversion % = Ozone hardware value confirmed ÷ quotation value shared. License Cost (Share) = Cost per User ID ÷ (1 + number shared with).<br>
-    Partners 1–23 are built into this page. Partners 24+ save to the server on Vercel (Vercel KV), or to <strong>oz.xlsx</strong> when running locally without KV.
+    Every partner is saved on the server (create, update, and delete). Refresh and redeploy keep that saved list. The built-in 23 partners are only the starting data until the first save.
   </div>
 </div>
 
@@ -384,6 +384,7 @@ let activeFilter = 'All';
 let isDirty = false;
 let excelLoadedFromServer = false;
 let useCloudApi = false;
+let apiSaveFailed = false;
 let apiSaveTimer = null;
 const seedIdSet = new Set();
 let hasClaudeStorage = (typeof window !== 'undefined' && !!window.storage && typeof window.storage.get === 'function');
@@ -426,51 +427,182 @@ function parseExcelArrayBuffer(buf){
   return XLSX.utils.sheet_to_json(sheet, {defval:''});
 }
 
+let saveInFlight = false;
+let saveAgain = false;
+let localSnapshotActive = false;
+
+function cloneSeed(){
+  return JSON.parse(JSON.stringify(seedData));
+}
+
+function sortClients(){
+  clients.sort((a,b)=>(Number(a.sno)||0)-(Number(b.sno)||0));
+}
+
+function escapeHtml(s){
+  return String(s ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function normalizeStoredPartner(p){
+  const c = Object.assign({}, p || {});
+  if(Array.isArray(c.products)){
+    c.products = c.products.map(s=>String(s).trim()).filter(Boolean);
+  } else {
+    c.products = c.products ? String(c.products).split('|').map(s=>s.trim()).filter(Boolean) : [];
+  }
+  NUMERIC_FIELDS.forEach(f=>{ c[f] = Number(c[f]) || 0; });
+  if(!c.id) c.id = 'c' + Date.now() + Math.random().toString(36).slice(2, 6);
+  if(!c.converted) c.converted = 'No';
+  if(!c.status) c.status = 'Lead';
+  c.firm = c.firm || '';
+  c.contactName = c.contactName || '';
+  c.contactNumber = c.contactNumber || '';
+  c.location = c.location || '';
+  c.referredBy = c.referredBy || '';
+  c.experience = c.experience || '';
+  return c;
+}
+
+function listLooksFull(list){
+  return (list || []).some(p => seedIdSet.has(p.id) || Number(p.sno) <= SEED_PARTNER_COUNT);
+}
+
 function mergeExtraPartners(extraList){
   const byId = new Map();
-  extraList.filter(isExtraPartner).forEach(p=>byId.set(p.id, p));
-  clients = JSON.parse(JSON.stringify(seedData));
+  extraList.filter(isExtraPartner).forEach(p=>byId.set(p.id, normalizeStoredPartner(p)));
+  clients = cloneSeed();
   byId.forEach(p=>clients.push(p));
-  clients.sort((a,b)=>(Number(a.sno)||0)-(Number(b.sno)||0));
+  sortClients();
+}
+
+function applyPartnerList(list, version){
+  const partners = (Array.isArray(list) ? list : []).map(normalizeStoredPartner);
+  if(Number(version) >= 2){
+    clients = partners;
+    sortClients();
+    return;
+  }
+  if(listLooksFull(partners)){
+    clients = partners;
+    sortClients();
+    return;
+  }
+  mergeExtraPartners(partners);
+}
+
+function parseApiPayload(payload){
+  if(Array.isArray(payload)) return { storage: 'unknown', version: 1, partners: payload };
+  if(payload && Array.isArray(payload.partners)){
+    return {
+      storage: payload.storage || 'unknown',
+      version: Number(payload.version) || 1,
+      partners: payload.partners,
+    };
+  }
+  return null;
+}
+
+function readLocalSnapshot(){
+  try{
+    const raw = localStorage.getItem(EXTRA_STORAGE_KEY);
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(Array.isArray(parsed)) return { version: 1, partners: parsed };
+    if(parsed && Array.isArray(parsed.partners)){
+      return { version: Number(parsed.version) || 1, partners: parsed.partners };
+    }
+    return null;
+  }catch(e){
+    return null;
+  }
+}
+
+function writeLocalSnapshot(){
+  try{
+    localStorage.setItem(EXTRA_STORAGE_KEY, JSON.stringify({ version: 2, partners: clients }));
+  }catch(e){}
 }
 
 async function loadExtrasFromApi(){
   try{
     const res = await fetch(API_PARTNERS, {cache:'no-store'});
     if(!res.ok) return false;
-    useCloudApi = res.headers.get('X-Storage') === 'vercel-kv';
-    const extras = await res.json();
-    if(!Array.isArray(extras)) return false;
-    mergeExtraPartners(extras);
-    try{ localStorage.setItem(EXTRA_STORAGE_KEY, JSON.stringify(extras)); }catch(e){}
-    return useCloudApi || extras.length > 0;
+    const headerKv = res.headers.get('X-Storage') === 'vercel-kv';
+    const parsed = parseApiPayload(await res.json());
+    if(!parsed) return false;
+    useCloudApi = parsed.storage === 'vercel-kv' || headerKv;
+    apiSaveFailed = false;
+    const version = Number(parsed.version) || 1;
+
+    if(useCloudApi && version < 2 && parsed.partners.length === 0){
+      const local = readLocalSnapshot();
+      if(local && (Number(local.version) >= 2 || local.partners.length)){
+        applyPartnerList(local.partners, local.version);
+        localSnapshotActive = Number(local.version) >= 2;
+        const saved = await savePartnersToApi(true);
+        return saved || local.partners.length > 0;
+      }
+      clients = cloneSeed();
+      return true;
+    }
+
+    applyPartnerList(parsed.partners, version);
+    writeLocalSnapshot();
+    return useCloudApi || parsed.partners.length > 0;
   }catch(e){
     return false;
   }
 }
 
-async function saveExtrasToApi(){
-  if(!useCloudApi) return false;
-  const extras = clients.filter(isExtraPartner);
+async function savePartnersToApi(force){
+  if(!force && !useCloudApi) return false;
+  const snapshot = JSON.parse(JSON.stringify(clients));
   try{
     const res = await fetch(API_PARTNERS, {
       method:'PUT',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(extras),
+      body: JSON.stringify({ version: 2, partners: snapshot }),
+      keepalive: true,
     });
+    if(res.status === 503){
+      apiSaveFailed = true;
+      useCloudApi = false;
+      updateStorageBadge();
+      return false;
+    }
     if(!res.ok) return false;
-    isDirty = false;
-    updateStorageBadge();
+    useCloudApi = true;
+    apiSaveFailed = false;
+    writeLocalSnapshot();
     return true;
   }catch(e){
     return false;
   }
 }
 
-function scheduleApiSave(){
-  if(!useCloudApi) return;
+function schedulePersist(){
+  writeLocalSnapshot();
+  isDirty = true;
+  updateStorageBadge();
   clearTimeout(apiSaveTimer);
-  apiSaveTimer = setTimeout(()=>{ saveExtrasToApi(); }, 400);
+  apiSaveTimer = setTimeout(()=>{ persist(); }, 350);
+}
+
+function flushServerSave(){
+  if(!useCloudApi || !isDirty) return;
+  clearTimeout(apiSaveTimer);
+  try{
+    fetch(API_PARTNERS, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ version: 2, partners: clients }),
+      keepalive: true,
+    });
+  }catch(e){}
 }
 
 async function loadExcelFromUrl(){
@@ -479,10 +611,11 @@ async function loadExcelFromUrl(){
     if(!res.ok) return false;
     const buf = await res.arrayBuffer();
     const rows = parseExcelArrayBuffer(buf);
-    const extras = rows.map(partnerFromRow).filter(r=>r.firm || r.sno > SEED_PARTNER_COUNT);
-    mergeExtraPartners(extras);
+    const loaded = rows.map(partnerFromRow).filter(r=>r.firm || Number(r.sno));
+    if(!loaded.length) return false;
+    applyPartnerList(loaded, listLooksFull(loaded) ? 2 : 1);
     excelLoadedFromServer = true;
-    try{ localStorage.setItem(EXTRA_STORAGE_KEY, JSON.stringify(extras)); }catch(e){}
+    writeLocalSnapshot();
     return true;
   }catch(e){
     return false;
@@ -490,26 +623,21 @@ async function loadExcelFromUrl(){
 }
 
 function loadExtrasFromLocalStorage(){
-  try{
-    const raw = localStorage.getItem(EXTRA_STORAGE_KEY);
-    if(!raw) return false;
-    const extras = JSON.parse(raw);
-    if(!Array.isArray(extras) || !extras.length) return false;
-    mergeExtraPartners(extras);
+  const local = readLocalSnapshot();
+  if(!local) return false;
+  if(Number(local.version) >= 2){
+    applyPartnerList(local.partners, 2);
+    localSnapshotActive = true;
     return true;
-  }catch(e){
-    return false;
   }
-}
-
-function saveExtrasToLocalStorage(){
-  const extras = clients.filter(isExtraPartner);
-  try{ localStorage.setItem(EXTRA_STORAGE_KEY, JSON.stringify(extras)); }catch(e){}
+  if(!local.partners.length) return false;
+  mergeExtraPartners(local.partners);
+  localSnapshotActive = true;
+  return true;
 }
 
 function downloadExcelFile(){
-  const extras = clients.filter(isExtraPartner);
-  const rows = extras.map(partnerToRow);
+  const rows = clients.map(partnerToRow);
   const ws = XLSX.utils.json_to_sheet(rows, {header: EXCEL_COLUMNS});
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Partners');
@@ -520,12 +648,15 @@ function downloadExcelFile(){
 
 function applyExcelBuffer(buf){
   const rows = parseExcelArrayBuffer(buf);
-  const extras = rows.map(partnerFromRow).filter(r=>r.firm || Number(r.sno) > SEED_PARTNER_COUNT);
-  mergeExtraPartners(extras);
-  saveExtrasToLocalStorage();
-  isDirty = false;
+  const loaded = rows.map(partnerFromRow).filter(r=>r.firm || Number(r.sno));
+  applyPartnerList(loaded, listLooksFull(loaded) ? 2 : 1);
+  writeLocalSnapshot();
   excelLoadedFromServer = true;
-  updateStorageBadge();
+  if(useCloudApi) persist();
+  else {
+    isDirty = false;
+    updateStorageBadge();
+  }
   render();
 }
 
@@ -567,50 +698,75 @@ async function loadData(){
 }
 
 async function persist(){
-  saveExtrasToLocalStorage();
-  if(useCloudApi){
-    isDirty = true;
-    updateStorageBadge();
-    scheduleApiSave();
-  } else {
-    isDirty = true;
-    updateStorageBadge();
-  }
+  writeLocalSnapshot();
   if(hasClaudeStorage){
     try{ await window.storage.set(STORAGE_KEY, JSON.stringify(clients), false); }
     catch(e){ hasClaudeStorage = false; }
+  }
+  if(!useCloudApi){
+    isDirty = true;
+    updateStorageBadge();
+    return false;
+  }
+  if(saveInFlight){
+    saveAgain = true;
+    isDirty = true;
+    updateStorageBadge();
+    return true;
+  }
+  saveInFlight = true;
+  isDirty = true;
+  updateStorageBadge();
+  try{
+    let ok = false;
+    do {
+      saveAgain = false;
+      ok = await savePartnersToApi(true);
+    } while(saveAgain && ok);
+    if(ok && !saveAgain){
+      isDirty = false;
+      updateStorageBadge();
+    }
+    return ok;
+  } finally {
+    saveInFlight = false;
   }
 }
 
 function updateStorageBadge(){
   const el = document.getElementById('storageBadge');
   if(!el) return;
-  const extraCount = clients.filter(isExtraPartner).length;
+  const total = clients.length;
   if(hasClaudeStorage){
     el.textContent = '● Auto-saving to this app\'s storage';
     el.style.color = '#1E8E5A';
+  } else if(apiSaveFailed || (location.protocol.startsWith('http') && !useCloudApi && total)){
+    el.textContent = '⚠ Server storage not active — Vercel: add Upstash Redis, then Redeploy. Until then, edits stay in this browser only.';
+    el.style.color = '#C4432B';
   } else if(useCloudApi){
     el.textContent = isDirty
-      ? `● Saving ${extraCount} extra partner(s) to server…`
-      : `● ${extraCount} extra partner(s) on server (Vercel KV) · refresh keeps data`;
+      ? `● Saving ${total} partner(s) to server…`
+      : `● ${total} partner(s) on server · create, update, and delete survive refresh`;
     el.style.color = isDirty ? '#B27B00' : '#1E8E5A';
   } else if(isDirty){
-    el.textContent = '⚠ Partners 24+ changed — click "Save to Excel" and replace oz.xlsx in this folder (backup in browser storage)';
+    el.textContent = '⚠ Changes are in this browser only — click "Save to Excel" for a file backup';
     el.style.color = '#B27B00';
   } else if(excelLoadedFromServer){
-    el.textContent = `● Loaded ${extraCount} partner(s) from ${EXCEL_FILE} · partners 1–${SEED_PARTNER_COUNT} from page`;
+    el.textContent = `● Loaded ${total} partner(s) from ${EXCEL_FILE}`;
     el.style.color = '#1E8E5A';
-  } else if(extraCount){
-    el.textContent = `● ${extraCount} extra partner(s) from browser storage — use "Load Excel" or run a local server to read ${EXCEL_FILE}`;
+  } else if(localSnapshotActive){
+    el.textContent = `● ${total} partner(s) restored from this browser`;
     el.style.color = '#2563A8';
   } else {
-    el.textContent = `● Partners 1–${SEED_PARTNER_COUNT} ready · add partner 24+ then save to ${EXCEL_FILE}`;
+    el.textContent = `● ${total} starting partners ready · edits save when server storage is connected`;
     el.style.color = '#6B7488';
   }
 }
 
+window.addEventListener('pagehide', flushServerSave);
 window.addEventListener('beforeunload', function(e){
-  if(isDirty && !hasClaudeStorage){
+  flushServerSave();
+  if(isDirty && !hasClaudeStorage && !useCloudApi){
     e.preventDefault(); e.returnValue = ''; return '';
   }
 });
@@ -685,8 +841,8 @@ function renderTable(){
     const convPct = c.quotationValue>0 ? ((c.hardwareValue/c.quotationValue)*100).toFixed(1)+'%' : '—';
     return `<tr>
       <td>${c.sno}</td>
-      <td>${c.firm}</td>
-      <td><span class="status-pill" style="background:${col.bg};color:${col.fg}">${c.status||'—'}</span></td>
+      <td>${escapeHtml(c.firm)}</td>
+      <td><span class="status-pill" style="background:${col.bg};color:${col.fg}">${escapeHtml(c.status||'—')}</span></td>
       <td>${c.userIds}</td>
       <td>${fmtINR(share)}</td>
       <td>${fmtINR(c.quotationValue)}</td>
@@ -701,26 +857,23 @@ function renderCards(){
   const grid = document.getElementById('cardGrid');
   grid.innerHTML = clients.filter(matchesFilter).map(c=>{
     const col = statusColor(c.status);
-    const tags = (c.products||[]).map(p=>`<span class="tag">${p}</span>`).join('');
     return `<div class="card" data-id="${c.id}">
       <div class="top">
         <div>
-          <h3>${c.sno}. ${c.firm}</h3>
-          <div class="sub">${c.contactName} · ${c.contactNumber} · ${c.location}<br>Referred by: ${c.referredBy}</div>
+          <h3>${escapeHtml(c.sno)}. ${escapeHtml(c.firm)}</h3>
+          <div class="sub">${escapeHtml(c.contactName)} · ${escapeHtml(c.contactNumber)} · ${escapeHtml(c.location)}<br>Referred by: ${escapeHtml(c.referredBy)}</div>
         </div>
         <button class="remove-btn" data-action="remove">✕ Remove</button>
       </div>
-      <div class="tags">${tags}</div>
-      <input class="status-input" data-field="status" value="${c.status||''}" style="background:${col.bg};color:${col.fg}">
+      <div class="tags">${(c.products||[]).map(p=>`<span class="tag">${escapeHtml(p)}</span>`).join('')}</div>
+      <input class="status-input" data-field="status" value="${escapeHtml(c.status||'')}" style="background:${col.bg};color:${col.fg}">
       <div class="field-grid">
-        ${isExtraPartner(c) ? `
-        <div class="field full"><label>Firm / Dealer name</label><input type="text" data-field="firm" value="${(c.firm||'').replace(/"/g,'&quot;')}"></div>
-        <div class="field"><label>Contact name</label><input type="text" data-field="contactName" value="${(c.contactName||'').replace(/"/g,'&quot;')}"></div>
-        <div class="field"><label>Contact number</label><input type="text" data-field="contactNumber" value="${(c.contactNumber||'').replace(/"/g,'&quot;')}"></div>
-        <div class="field"><label>Location</label><input type="text" data-field="location" value="${(c.location||'').replace(/"/g,'&quot;')}"></div>
-        <div class="field full"><label>Referred by</label><input type="text" data-field="referredBy" value="${(c.referredBy||'').replace(/"/g,'&quot;')}"></div>
-        <div class="field full"><label>Products (separate with |)</label><input type="text" data-field="products" value="${(c.products||[]).join(' | ').replace(/"/g,'&quot;')}"></div>
-        ` : ''}
+        <div class="field full"><label>Firm / Dealer name</label><input type="text" data-field="firm" value="${escapeHtml(c.firm||'')}"></div>
+        <div class="field"><label>Contact name</label><input type="text" data-field="contactName" value="${escapeHtml(c.contactName||'')}"></div>
+        <div class="field"><label>Contact number</label><input type="text" data-field="contactNumber" value="${escapeHtml(c.contactNumber||'')}"></div>
+        <div class="field"><label>Location</label><input type="text" data-field="location" value="${escapeHtml(c.location||'')}"></div>
+        <div class="field full"><label>Referred by</label><input type="text" data-field="referredBy" value="${escapeHtml(c.referredBy||'')}"></div>
+        <div class="field full"><label>Products (separate with |)</label><input type="text" data-field="products" value="${escapeHtml((c.products||[]).join(' | '))}"></div>
         <div class="field"><label>Login Credential Qty</label><input type="number" data-field="userIds" value="${c.userIds}"></div>
         <div class="field"><label>Cost per User ID (₹)</label><input type="number" data-field="costPerUserId" value="${c.costPerUserId}"></div>
         <div class="field"><label>Shared With (other dealers)</label><input type="number" data-field="sharedWithCount" value="${c.sharedWithCount}"></div>
@@ -737,7 +890,7 @@ function renderCards(){
         </div>
         <div class="field full">
           <label>Partner Experience</label>
-          <textarea data-field="experience">${c.experience||''}</textarea>
+          <textarea data-field="experience">${escapeHtml(c.experience||'')}</textarea>
         </div>
       </div>
       <div class="card-footer">
@@ -749,37 +902,61 @@ function renderCards(){
 
   grid.querySelectorAll('.card').forEach(cardEl=>{
     const id = cardEl.dataset.id;
+    const applyField = (inputEl)=>{
+      const client = clients.find(c=>c.id===id);
+      if(!client) return null;
+      const field = inputEl.dataset.field;
+      const val = inputEl.value;
+      if(field === 'products'){
+        client.products = val.split('|').map(s=>s.trim()).filter(Boolean);
+      } else if(inputEl.type==='number') {
+        client[field] = Number(val)||0;
+      } else {
+        client[field] = val;
+      }
+      if(field === 'firm'){
+        const h3 = cardEl.querySelector('h3');
+        if(h3) h3.textContent = client.sno + '. ' + client.firm;
+      }
+      if(field === 'contactName' || field === 'contactNumber' || field === 'location' || field === 'referredBy'){
+        const sub = cardEl.querySelector('.sub');
+        if(sub) sub.innerHTML = escapeHtml(client.contactName) + ' · ' + escapeHtml(client.contactNumber) + ' · ' + escapeHtml(client.location) + '<br>Referred by: ' + escapeHtml(client.referredBy);
+      }
+      if(field === 'products'){
+        const tags = cardEl.querySelector('.tags');
+        if(tags) tags.innerHTML = (client.products||[]).map(p=>'<span class="tag">' + escapeHtml(p) + '</span>').join('');
+      }
+      if(field === 'status'){
+        const col = statusColor(val);
+        inputEl.style.background = col.bg;
+        inputEl.style.color = col.fg;
+      }
+      return field;
+    };
     cardEl.querySelectorAll('[data-field]').forEach(inputEl=>{
+      inputEl.addEventListener('input', ()=>{
+        if(!applyField(inputEl)) return;
+        renderKPIs();
+        renderTable();
+        schedulePersist();
+      });
       inputEl.addEventListener('change', ()=>{
-        const client = clients.find(c=>c.id===id);
-        const field = inputEl.dataset.field;
-        let val = inputEl.value;
-        if(field === 'products'){
-          client.products = val.split('|').map(s=>s.trim()).filter(Boolean);
-        } else if(inputEl.type==='number') {
-          val = Number(val)||0;
-          client[field] = val;
-        } else {
-          client[field] = val;
-        }
-        if(field === 'firm'){
-          render();
-          return;
-        }
-        persist();
-        renderKPIs(); renderTable();
+        if(!applyField(inputEl)) return;
+        clearTimeout(apiSaveTimer);
+        renderKPIs();
+        renderTable();
         const flash = cardEl.querySelector('.saved-flash');
-        flash.classList.add('show');
-        setTimeout(()=>flash.classList.remove('show'),900);
-        if(field==='status'){
-          const col = statusColor(val);
-          inputEl.style.background = col.bg; inputEl.style.color = col.fg;
-        }
+        persist().then(()=>{
+          if(!flash) return;
+          flash.classList.add('show');
+          setTimeout(()=>flash.classList.remove('show'),900);
+        });
       });
     });
     cardEl.querySelector('[data-action="remove"]').addEventListener('click', ()=>{
       if(!confirm('Remove this partner from the tracker?')) return;
       clients = clients.filter(c=>c.id!==id);
+      clearTimeout(apiSaveTimer);
       persist();
       render();
     });
