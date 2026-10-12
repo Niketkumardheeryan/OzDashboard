@@ -437,6 +437,7 @@ function cloneSeed(){
 
 function sortClients(){
   clients.sort((a,b)=>(Number(a.sno)||0)-(Number(b.sno)||0));
+  clients.forEach((c, idx)=>{ c.sno = idx + 1; });
 }
 
 function escapeHtml(s){
@@ -778,7 +779,7 @@ function computeKPIs(){
     const s=(c.status||'').toLowerCase();
     if(s.includes('demo')) k.demo++;
     else if(s.includes('about to onboard')) k.aboutToOnboard++;
-    else if(s.includes('active') || s === 'onboard' || s.includes('onboarded')) k.active++;
+    else if(s.includes('active') || s.includes('onboarded') || (s.includes('onboard') && !s.includes('about'))) k.active++;
     else if(s.includes('lost')) k.lost++;
     k.loginIds += Number(c.userIds)||0;
     k.drawings += Number(c.designs)||0;
@@ -808,6 +809,7 @@ function renderKPIs(){
   const hero = document.getElementById('heroRow');
   hero.innerHTML = `
     <div class="hero gold"><div class="label">Ozone Hardware Confirmed</div><div class="value">${fmtINR(k.hardware)}</div></div>
+    <div class="hero"><div class="label">Net ROI (Hardware − License Cost)</div><div class="value">${fmtINR(k.hardware - k.licenseCost)}</div></div>
   `;
 }
 
@@ -955,6 +957,7 @@ function renderCards(){
     cardEl.querySelector('[data-action="remove"]').addEventListener('click', ()=>{
       if(!confirm('Remove this partner from the tracker?')) return;
       clients = clients.filter(c=>c.id!==id);
+      sortClients();
       clearTimeout(apiSaveTimer);
       persist();
       render();
@@ -970,14 +973,14 @@ function render(){
 }
 
 function addPartner(){
-  const nextSno = clients.length ? Math.max(...clients.map(c=>c.sno))+1 : 1;
   const newId = 'c' + Date.now();
   clients.push({
-    id:newId, sno:nextSno, firm:'New Partner Firm', products:[],
+    id:newId, sno:clients.length + 1, firm:'New Partner Firm', products:[],
     contactName:'', contactNumber:'', location:'', referredBy:'',
     status:'Lead', userIds:0, costPerUserId:0, sharedWithCount:0,
     designs:0, quotationValue:0, proposalsFinalized:0, hardwareValue:0, converted:'No', experience:''
   });
+  sortClients();
   persist();
   render();
 }
