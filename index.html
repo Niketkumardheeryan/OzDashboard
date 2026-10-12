@@ -808,7 +808,6 @@ function renderKPIs(){
   const hero = document.getElementById('heroRow');
   hero.innerHTML = `
     <div class="hero gold"><div class="label">Ozone Hardware Confirmed</div><div class="value">${fmtINR(k.hardware)}</div></div>
-    <div class="hero"><div class="label">Net ROI (Hardware − License Cost)</div><div class="value">${fmtINR(k.hardware - k.licenseCost)}</div></div>
   `;
 }
 
